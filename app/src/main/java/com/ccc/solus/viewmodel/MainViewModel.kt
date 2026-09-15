@@ -33,19 +33,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     private val observer = FileObserverManager { refresh() }
+    private val folderStack = mutableListOf<FolderItem>()
     private var currentFolder: File? = null
 
     init {
         rescan()
     }
 
-    /** Escaneo completo desde la raíz /sdcard */
+    /** Escaneo de carpetas raíz permitidas */
     fun rescan() {
         _state.value = UiState.Loading
         viewModelScope.launch {
-            val root = Environment.getExternalStorageDirectory()
+            val sdcard = Environment.getExternalStorageDirectory()
             val folders = withContext(Dispatchers.IO) {
-                MusicScanner.scanFolders(root)
+                MusicScanner.scanWhitelistedFolders(sdcard)
             }
             _state.value = if (folders.isEmpty()) UiState.Empty
             else UiState.FolderList(folders)
@@ -54,16 +55,30 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Entrar a una carpeta específica */
     fun openFolder(folder: FolderItem) {
+        folderStack.add(folder)
         currentFolder = folder.folder
         observer.observe(folder.folder)
         refresh()
     }
 
-    /** Volver a la lista de carpetas raíz */
-    fun goBackToFolders() {
-        currentFolder = null
-        observer.stop()
-        rescan()
+    /**
+     * Retroceder en la navegación:
+     * - Si hay más de una carpeta en el stack → vuelve a la anterior
+     * - Si solo hay una → vuelve a la lista raíz
+     */
+    fun goBack() {
+        if (folderStack.size > 1) {
+            folderStack.removeAt(folderStack.size - 1)
+            val parent = folderStack.last()
+            currentFolder = parent.folder
+            observer.observe(parent.folder)
+            refresh()
+        } else {
+            folderStack.clear()
+            currentFolder = null
+            observer.stop()
+            rescan()
+        }
     }
 
     /** Re-escanea la carpeta actual (llamado por el observer) */
