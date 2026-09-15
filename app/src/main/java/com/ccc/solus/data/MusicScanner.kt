@@ -1,4 +1,4 @@
-package com.ccc.solus.data
+        package com.ccc.solus.data
 
 import java.io.File
 
@@ -13,52 +13,41 @@ object MusicScanner {
         "Android", "data", "obb"
     )
 
+    // Carpetas raíz permitidas (solo se escanean estas)
+    private val ROOT_WHITELIST = listOf(
+        "Download",
+        "Music",
+        "Movies",
+        "Recordings"
+    )
+
     fun isAudio(file: File): Boolean {
         return file.isFile && file.extension.lowercase() in AUDIO_EXTENSIONS
     }
 
     /**
-     * Devuelve la lista de carpetas (en cualquier nivel a partir de [root])
-     * que contienen al menos un archivo de audio, directa o indirectamente.
-     * El orden es alfabético natural, carpetas primero.
+     * Escanea SOLO las carpetas de la whitelist (Download, Music, Movies,
+     * Recordings) y devuelve las que contienen música en cualquier nivel.
      */
-    fun scanFolders(root: File): List<FolderItem> {
+    fun scanWhitelistedFolders(sdcard: File): List<FolderItem> {
         val result = mutableListOf<FolderItem>()
-        walkFolders(root, result)
+        for (name in ROOT_WHITELIST) {
+            val folder = File(sdcard, name)
+            if (folder.isDirectory && containsAudio(folder)) {
+                val directCount = folder.listFiles()?.count { isAudio(it) } ?: 0
+                result.add(
+                    FolderItem(
+                        folder = folder,
+                        name = folder.name,
+                        path = folder.absolutePath,
+                        audioCount = directCount
+                    )
+                )
+            }
+        }
         return result.sortedWith(
             compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
         )
-    }
-
-    private fun walkFolders(dir: File, out: MutableList<FolderItem>) {
-        val children = dir.listFiles() ?: return
-
-        // Filtrar directorios ignorados
-        val subdirs = children.filter {
-            it.isDirectory && it.name !in IGNORED_DIRS && !it.name.startsWith(".")
-        }
-
-        // ¿Hay audios directos en esta carpeta?
-        val directAudios = children.count { isAudio(it) }
-
-        // Recorrer subcarpetas primero
-        var hasAudioBelow = false
-        for (sub in subdirs) {
-            val before = out.size
-            walkFolders(sub, out)
-            if (out.size > before) hasAudioBelow = true
-        }
-
-        if (directAudios > 0 || hasAudioBelow) {
-            out.add(
-                FolderItem(
-                    folder = dir,
-                    name = dir.name,
-                    path = dir.absolutePath,
-                    audioCount = directAudios
-                )
-            )
-        }
     }
 
     /**
