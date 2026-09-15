@@ -1,1 +1,19 @@
-<!-- TODO -->
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Solus</string>
+
+    <string name="loading">Escaneando música…</string>
+
+    <string name="permission_title">Acceso a archivos</string>
+    <string name="permission_message">Solus necesita acceso total a tus archivos para encontrar y reproducir tu música local. Sin este permiso no puede funcionar.</string>
+    <string name="permission_button">Conceder permiso</string>
+    <string name="permission_denied">Permiso denegado. La app no puede continuar.</string>
+
+    <string name="folders_title">Carpetas con música</string>
+    <string name="files_title">Archivos de audio</string>
+
+    <string name="no_music">No se encontró música en este dispositivo.</string>
+    <string name="no_files">Esta carpeta no contiene archivos de audio.</string>
+
+    <string name="back">Atrás</string>
+</resources>
