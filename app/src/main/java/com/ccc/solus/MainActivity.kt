@@ -1,7 +1,8 @@
-package com.ccc.solus
+            package com.ccc.solus
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -18,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ccc.solus.ui.screens.FilesScreen
@@ -51,13 +53,11 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun SolusApp(viewModel: MainViewModel) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     var hasPermission by remember { mutableStateOf(Permissions.hasAllFilesAccess()) }
     var showPermissionDialog by remember { mutableStateOf(!hasPermission) }
 
-    // Cuando vuelve de Ajustes, comprobamos el permiso otra vez
     LaunchedEffect(Unit) {
-        // Cada vez que la pantalla se recompose tras volver de Ajustes
         hasPermission = Permissions.hasAllFilesAccess()
         if (hasPermission) {
             showPermissionDialog = false
@@ -67,14 +67,12 @@ private fun SolusApp(viewModel: MainViewModel) {
 
     if (showPermissionDialog) {
         AlertDialog(
-            onDismissRequest = { /* no se puede cerrar sin permiso */ },
+            onDismissRequest = { /* no dismissable */ },
             title = { Text(stringResource(R.string.permission_title)) },
             text = { Text(stringResource(R.string.permission_message)) },
             confirmButton = {
                 TextButton(
-                    onClick = {
-                        Permissions.requestAllFilesAccess(context)
-                    }
+                    onClick = { Permissions.requestAllFilesAccess(context) }
                 ) {
                     Text(stringResource(R.string.permission_button))
                 }
@@ -84,6 +82,11 @@ private fun SolusApp(viewModel: MainViewModel) {
     }
 
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Intercepta el gesto/botón "atrás" SOLO cuando estamos dentro de una carpeta
+    BackHandler(enabled = state is UiState.FileList) {
+        viewModel.goBack()
+    }
 
     when (val s = state) {
         is UiState.Loading -> LoadingScreen()
@@ -103,7 +106,7 @@ private fun SolusApp(viewModel: MainViewModel) {
             files = s.files,
             subfolders = s.subfolders,
             onFolderClick = { folder -> viewModel.openFolder(folder) },
-            onBack = { viewModel.goBackToFolders() }
+            onBack = { viewModel.goBack() }
         )
     }
 }
